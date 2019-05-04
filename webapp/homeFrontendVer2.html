@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <title>Connecare</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap.min.js"></script>
+    <script src="js/leaflet.js"></script>
+    <script src="js/leaflet-providers.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="icon.js"></script>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" href="js/leaflet.css"/>
+    <link rel="stylesheet" href="css/font-awesome-4.7.0/css/font-awesome.min.css">
+
+    <!--Librerie per usare la funzione print della datatable e per la selezionabilità delle righe-->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jszip-2.5.0/dt-1.10.18/b-1.5.6/b-colvis-1.5.6/b-flash-1.5.6/b-html5-1.5.6/b-print-1.5.6/sl-1.3.0/datatables.min.css"/>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/dt/jszip-2.5.0/dt-1.10.18/b-1.5.6/b-colvis-1.5.6/b-flash-1.5.6/b-html5-1.5.6/b-print-1.5.6/sl-1.3.0/datatables.min.js"></script>
+
+    <!--Librerie per usare Leaflet Control Geocoder-->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+    <!-- Load Esri Leaflet from CDN -->
+    <script src="https://unpkg.com/esri-leaflet"></script>
+
+    <!-- Esri Leaflet Geocoder -->
+    <link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder/dist/esri-leaflet-geocoder.css">
+    <script src="https://unpkg.com/esri-leaflet-geocoder"></script>
+ 
+    <!-- Importo il file js contenente le funzioni di sincronizzazione  -->
+   <script src="functionsSync.js"></script> 
+ 
+    <!-- Importo il file js contenente le funzioni degli indici di rischio  -->
+     <script src="functionsRisk.js"></script>   
+
+    <!-- Importo il file js contenente le funzioni degli indici di rischio  -->
+    <script src="functionsOthers.js"></script>   
+
+    <!-- Importo il file js contenente i tag jQuery  -->
+     <script src="functionsJQuery.js"></script>   
+
+    <!-- Importo il file css contenente le caratteristiche stilistiche della pagina  -->
+    <link href="StyleSheet.css" rel="stylesheet" type="text/css">
+    
+    
+<!-- Importo il plugin per il routing di leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+
+
+</head>
+
+<body background="text1.jpg">
+<div class="container-fluid" style="margin-top: 5px">
+    <div class="row">
+        <div class="col-lg-2 text-center">
+            <img src="photo/logo.png" class="img-rounded logo" alt="Connecare (logo)">
+        </div>
+        <div class="col-lg-8 text-center">
+            <div class="btn-group mygroup dropdown">
+                <button type="button" style="opacity: 0.7" id="toggleGreen"
+                        class="mw-100 btn btn-default botdrop dropdown-toggle" data-toggle="dropdown"
+                        aria-haspopup="true"
+                        aria-expanded="false">
+                    <b>Hide/show green</b> <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span>
+                </button>
+                <ul class="list-group dropdown-menu" aria-labelledby="dropdown">
+                    <li class="list-group-item form-check">
+                        <input type="checkbox" class="form-check-input" id="greenDrop">
+                        <label class="form-check-label" for="toggleGreen">
+                            Hide green patients (least severe)
+                        </label>
+                    </li>
+                    <li class="list-group-item form-check">
+                        <input type="checkbox" class="form-check-input" id="orangeDrop">
+                        <label class="form-check-label" for="toggleGreen">
+                            Hide orange patients
+                        </label>
+                    </li>
+                    <li class="list-group-item form-check">
+                        <input type="checkbox" class="form-check-input" id="redDrop">
+                        <label class="form-check-label" for="toggleGreen">
+                            Hide red patients (most severe)
+                        </label>
+                    </li>
+                </ul>
+                <button type="button" style="opacity:0.7"
+                        class="mw-100 btn btn-default botdrop" data-toggle="popover" id="toggleBlink"
+                        data-trigger="hover"
+                        data-placement="bottom"
+                        data-content="Click to enable or disable blinking effect (patients with pending alerts or messages)">
+                    <b>Toggle blinking</b></button>
+                   
+                <button type="button" style="opacity:0.7"
+                        class="mw-100 btn btn-default botdrop" data-toggle="popover" id="toggleRisk"
+                        data-trigger="hover"
+                        data-placement="bottom">
+                    <b>Toggle Risk</b></button>
+            </div>
+        </div>
+        <div class="col-lg-2 text-center">
+            <button type="button" style="opacity:0.7"
+                    class="mw-100 btn btn-default botdrop" data-toggle="popover" id="legend" data-trigger="hover"
+                    data-placement="bottom"
+                    data-html="true"
+                    data-content="<ul><li><font color='red'>Red</font> markers are the most critical patients (according to currently selected risk score)</li><li><font color='green'>Green</font> markers are the least critical</li><li><font color='orange'>Orange</font> markers are inbetween</li></ul>">
+                <b>Map legend</b></button>
+        </div>
+    </div>
+</div>
+<!--<div class="row">
+    <div class="col-lg-12 text-center">
+        <img src="photo/logo.png" class="img-rounded logo" alt="logo" style="margin-top: 30px; margin-bottom: 30px">
+    </div>
+</div>-->
+
+
+<div class="container-fluid" style="margin-top: 20px;">
+    <div class="row">
+        <div class="col-sm-3">
+            <form>
+                <div class="input-group">
+                    <input type="text" id="myInput" class="form-control" placeholder="Search Patient"
+                           style="height: 40px;">
+                    <div class="input-group-btn">
+                        <button class="btn btn-default" id="searchButton"  style="height: 40px;">
+                            <i class="glyphicon glyphicon-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-sm-9">
+            <ul class="list-inline list-group-flush">
+
+                <li class="mw-100 list-group-item" style="text-align: center; background-color: #583470; opacity: 0.8;">
+                    <b
+                            style="color: white;">Risk scores</b>
+
+                <li class="mw-100 list-group-item" style="font-size: 13px; opacity: 0.9;">
+                    <label class="radio-inline"><input type="radio" name="risk-scores" id="lace">LACE<span
+                            class="success"></span></label>
+
+                <li class="mw-100 list-group-item" style="font-size: 13px; opacity: 0.9;">
+                    <label class="radio-inline"><input type="radio" name="risk-scores" id="charlson">Charlson<span
+                            class="success"></span></label>
+
+                <li class="mw-100 list-group-item" style="font-size: 13px; opacity: 0.9;">
+                    <label class="radio-inline"><input type="radio" name="risk-scores" id="gma">GMA<span
+                            class="success"></span></label>
+
+                <li class="mw-100 list-group-item" style="font-size: 13px; opacity: 0.9;">
+                    <label class="radio-inline"><input type="radio" name="risk-scores" id="barthel">Barthel<span
+                            class="success"></span></label>
+
+                <li class="mw-100 list-group-item" style="font-size: 13px; opacity: 0.9;">
+                    <label class="radio-inline"><input type="radio" name="risk-scores" id="asa">ASA<span
+                            class="success"></span></label>                    
+				
+		
+            </ul>
+            
+            
+
+        </div>
+    </div>
+</div>
+
+<br>
+<div class="container-fluid">
+    <div class="row">
+
+        <div class="col-sm-3">
+            <div class="card">
+                <ul class="list-group list-group-flush">
+
+                    <li class="list-group-item" id="ciao"
+                        style="text-align: center; height: 40px; background-color: #583470; opacity: 0.8;"><b
+                            style="color: white;">Barriers</b>
+
+                    <li class="list-group-item" style="height: 40px; font-size: 13px; opacity: 0.9;">
+                        <label class="checkbox-inline"><input type="checkbox" id="skills">Skills to carry out
+                            treatment<span class="success"></span></label>
+
+                    <li class="list-group-item" style="height: 40px; font-size: 13px; opacity: 0.9;">
+                        <label class="checkbox-inline"><input type="checkbox"  id="retrieval">Retrieval of
+                            tablets from pharmacy<span
+                                    class="success"></span></label>
+
+                    <li class="list-group-item" style="height: 40px; font-size: 13px; opacity: 0.9;">
+                        <label class="checkbox-inline"><input type="checkbox" id="selfcare">Selfcare skills<span
+                                class="success"></span></label>
+
+                    <li class="list-group-item" style="height: 40px; font-size: 13px; opacity: 0.9;">
+                        <label class="checkbox-inline"><input type="checkbox" id="dwelling">Dwelling<span
+                                class="success"></span></label>
+
+                    <li class="list-group-item" style="height: 40px; font-size: 13px; opacity: 0.9;">
+                        <label class="checkbox-inline"><input type="checkbox" id="carer">Carer skills<span
+                                class="success"></span></label>
+
+                        <!--<li class="list-group-item" style="height: 50px; font-size: 13px; opacity: 0.9;">
+                            <label class="checkbox-inline"><input type="checkbox" id="checkAll">Toggle ALL barriers<span
+                                    class="success"></span></label>-->
+
+                    <li class="list-group-item">
+                        <button type="button" id="checkAll" class="list-group-item list-group-item-action toggle-all"
+                                data-toggle="popover" data-trigger="hover"
+                                data-placement="bottom"
+                                data-content="Click to check or uncheck all the barriers above">Toggle ALL
+                            barriers
+                        </button>
+
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-sm-9">
+            <div id="mapid" style="height: 600px;"></div>
+        </div>
+
+    </div>
+
+    <br>
+    
+    <div><button type="button" id="b" class="btn btn-default">TROVA SULLA MAPPA</button></div>
+    
+    <br>
+    
+    SINCRONIZZA MAPPA E TABELLA: <input type="checkbox" id="myCheck" onclick="myFunction()">
+    
+    <br>
+    
+    <div><button type="button" id="bRouting" class="btn btn-default">CALCOLA PERCORSO</button></div>
+    
+    <br>
+
+    <div class="row">
+        <div class="col-sm-3">
+        </div>
+        <div class="col-sm-9">
+            <!--<div class="table-responsive">-->
+            <table id="patientsTable" class="table table-striped table-bordered" style="width:100%">
+                <!--<thead class="thead-dark">
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Surname</th>
+                    <th scope="col">Dwelling address</th>
+                    <th scope="col">Selected risk score</th>
+                    <th scope="col">Selected barriers score</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <th scope="row">1</th>
+                    <td>Mark</td>
+                    <td>Otto</td>
+                    <td>@mdo</td>
+                </tr>
+                <tr>
+                    <th scope="row">2</th>
+                    <td>Jacob</td>
+                    <td>Thornton</td>
+                    <td>@fat</td>
+                </tr>
+                <tr>
+                    <th scope="row">3</th>
+                    <td>Larry</td>
+                    <td>the Bird</td>
+                    <td>@twitter</td>
+                </tr>
+                </tbody>-->
+            </table>
+            <!--</div>-->
+        </div>
+    </div>
+</div>
+
+<script>
+
+       function loadPatients(data) {
+        	let oCoordinates;
+            console.log("loadPatients data:");
+            
+            console.log(data);
+            let i = 0;
+            if (data != undefined) {
+                data.forEach(e => {
+                	var Patient = {};
+                	Patient.id = i;
+                	Patient.name = e.name;
+                	Patient.surname = e.surname;
+                	Patient.imgpath = e.imgpath;
+                	Patient.riskindexes= e.riskindexes;        	
+                	Patient.barriers=e.barriers;
+                	Patient.alarms=e.alarms;    	
+                	Patient.location=e.location;
+                	Patient.iconTemporaryColour= "",
+                	Patient.checkMessage= false,
+                	Patient.checkAlert= false,
+                	Patient.Lat= "",
+                	Patient.Lng= ""
+                	
+                	p.push(Patient);
+                	i++;
+              /*  
+                    p.push({
+                        id: i,
+                        name: e.name,
+                        surname: e.surname,
+                        photo: e.imgpath,
+                        asa: e.asa,
+                        barthel: e.barthel,
+                        charlson: e.charlson,
+                        lace: e.lace,
+                        gma: e.gma,
+                        carer: e.carer,
+                        dwelling: e.dwelling,
+                        retrieval: e.retrieval,
+                        selfcare: e.selfcare,
+                        skills: e.skills,
+                        messaggi: e.nmessages,
+                        alert: e.nalerts,
+                        iconTemporaryColour: "",
+                        checkMessage: false,
+                        checkAlert: false,
+                        Address: e.Address,
+                        City: e.City,
+                        Postal: e.Postal,
+                        Country: e.Country,
+                        Lat: "",
+                        Lng: ""
+                    });
+                    i++;
+                    
+                   */
+                });
+            }
+            console.log("loadPatients p (length: %s):", p.length);
+            for (let i = 0; i < p.length; i++) {   
+            	
+            	L.esri.Geocoding.geocode().address(p[i].location.Address).city(p[i].location.City).country(p[i].location.Country).postal(p[i].location.Postal).run(function(err, results, response){
+            		oCoordinates = results.results[0].latlng;
+            		p[i].Lat = results.results[0].latlng.lat;
+            		p[i].Lng = results.results[0].latlng.lng;
+            		p[i].icontTemporaryColour = baseColour;
+            		if (p[i].alarms.nmessages !== 0) {
+            			p[i].checkMessage = true;
+            		}
+            		if (p[i].alarms.nalerts !== 0) {
+                    p[i].checkAlert = true;
+            		}
+            		selectedIcon = getIcon(baseColour, p[i].checkMessage, p[i].checkAlert, stopBlink);
+                
+            		if (p[i].checkMessage || p[i].checkAlert) {
+            			if (p[i].checkMessage) {
+            				this["marker" + i] = L.marker([oCoordinates.lat, oCoordinates.lng], {icon: selectedIcon}).bindPopup("<div class='container-fluid' style='margin-top: 20px;'><div class='row'><div class='col-lg-12 text-center'><img src='" + p[i].imgpath + "' class='img-circle imgpatient text-center'></div><div class='row'><div class='col-lg-12 text-center'><h4>" + p[i].name + " " + p[i].surname + "</h4><h6> "+p[i].location.Address+" </h6></div></div></div><div class='row'><div class='col-lg-12 text-center'><h6><a href=''><span class='glyphicon glyphicon-alert'></span> Pending alerts: " + p[i].alarms.nalerts + "</a></h6></div></div></div><div class='row text-center'><button class='btn btn-warning'>Go to summary</button></div></div>",{autoClose: false});
+            			}
+            			if (!p[i].checkAlert) {
+            				this["marker" + i] = L.marker([oCoordinates.lat, oCoordinates.lng], {icon: selectedIcon}).bindPopup("<div class='container-fluid' style='margin-top: 20px;'><div class='row'><div class='col-lg-12 text-center'><img src='" + p[i].imgpath + "' class='img-circle imgpatient text-center'></div><div class='row'><div class='col-lg-12 text-center'><h4>" + p[i].name + " " + p[i].surname + "</h4><h6> "+p[i].location.Address+" </h6></div></div></div><div class='row'><div class='col-lg-12 text-center'><h6><a href=''><span class='glyphicon glyphicon-envelope'></span> Pending messages: " + p[i].alarms.nmessages + "</a></h6></div></div></div><div class='row text-center'><button class='btn btn-warning'>Go to summary</button></div></div>",{autoClose: false});
+            			}
+            			if (p[i].checkMessage && p[i].checkAlert) {
+            				this["marker" + i] = L.marker([oCoordinates.lat, oCoordinates.lng], {icon: selectedIcon}).bindPopup("<div class='container-fluid' style='margin-top: 20px;'><div class='row'><div class='col-lg-12 text-center'><img src='" + p[i].imgpath + "' class='img-circle imgpatient text-center'></div><div class='row'><div class='col-lg-12 text-center'><h4>" + p[i].name + " " + p[i].surname + "</h4><h6> "+p[i].location.Address+" </h6></div></div></div><div class='row'><div class='col-lg-12 text-center'><h6><a href=''><span class='glyphicon glyphicon-envelope'></span> Pending messages: " + p[i].alarms.nmessages + "</a><br><a href=''><span class='glyphicon glyphicon-alert'></span> Pending alerts: " + p[i].alarms.nalerts + "</a></h6></div></div></div><div class='row text-center'><button class='btn btn-warning'>Go to summary</button></div></div>",{autoClose: false});
+            			}
+            		} else {
+            			this["marker" + i] = L.marker([oCoordinates.lat, oCoordinates.lng], {icon: selectedIcon}).bindPopup("<div class='container-fluid' style='margin-top: 20px;'><div class='row'><div class='col-lg-12 text-center'><img src='" + p[i].imgpath + "' class='img-circle imgpatient text-center'></div><div class='row'><div class='col-lg-12 text-center'><h4>" + p[i].name + " " + p[i].surname + "</h4><h6> "+p[i].location.Address+" </h6></div></div></div><div class='row text-center'><button class='btn btn-warning'>Go to summary</button></div></div>",{autoClose: false});
+            		}
+            		const alpha = findOpacity(i);
+            		this["marker" + i].setOpacity(alpha);
+            		mymap.addLayer(this["marker" + i])
+            		markers[markers.length]=(this["marker" + i]);
+              });
+           } 
+        }
+        
+</script>
+
+</body>
+</html>

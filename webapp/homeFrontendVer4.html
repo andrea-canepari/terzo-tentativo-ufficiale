@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <title>Connecare</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" charset="utf8"
+            src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+            integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+            crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap.min.js"></script>
+    <script src="js/leaflet.js"></script>
+    <script src="js/leaflet-providers.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="icon.js"></script>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" href="js/leaflet.css"/>
+    <link rel="stylesheet" href="css/font-awesome-4.7.0/css/font-awesome.min.css">
+
+
+
+<!--Librerie per usare la funzione print della datatable e per la selezionabilità delle righe-->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jszip-2.5.0/dt-1.10.18/b-1.5.6/b-colvis-1.5.6/b-flash-1.5.6/b-html5-1.5.6/b-print-1.5.6/sl-1.3.0/datatables.min.css"/>
+ 
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/v/dt/jszip-2.5.0/dt-1.10.18/b-1.5.6/b-colvis-1.5.6/b-flash-1.5.6/b-html5-1.5.6/b-print-1.5.6/sl-1.3.0/datatables.min.js"></script>
+
+<!--Librerie per usare Leaflet Control Geocoder-->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+<!-- Load Esri Leaflet from CDN -->
+<script src="https://unpkg.com/esri-leaflet"></script>
+
+<!-- Esri Leaflet Geocoder -->
+<link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder/dist/esri-leaflet-geocoder.css">
+<script src="https://unpkg.com/esri-leaflet-geocoder"></script>
+
+
+    <script>
+     
+     
+
+        let skills = false;
+        let retrieval = false;
+        let selfcare = false;
+        let dwelling = false;
+        let carer = false;
+        let hideGreen = false;
+        let hideOrange = false;
+        let hideRed = false;
+        let stopBlink = false;
+        let checkAllBarriers = false;
+
+        let cacheHit = false;
+		var markers=[];
+        let mymap;
+
+        $(document).ready(function () {
+            $('[data-toggle="popover"]').popover();
+
+            $.ajax({
+                url: "http://localhost:9006/listPatients",
+                type: 'GET',
+                dataType: 'json',
+            }).then(function (data) {
+            	
+                loadPatients(data);
+                
+                $('#patientsTable').DataTable().clear();
+                p.forEach(e => {
+                
+                    $('#patientsTable').DataTable().row.add(e).draw();
+                })
+            });
+
+            var patientsTable = $('#patientsTable').DataTable({
+                dom: 'Bfrtip',
+        		buttons: [
+            		 {	extend: 'csvHtml5',
+                		exportOptions: {
+                    	columns: ':visible'}
+                     }, 
+            		 {	extend: 'excelHtml5',
+                		exportOptions: {
+                    	columns: ':visible'}
+                     }, 
+            		 {	extend: 'pdfHtml5',
+                		exportOptions: {
+                    	columns: ':visible'}
+                     },  
+            		 {	extend: 'print',
+                		exportOptions: {
+                    	columns: ':visible'}
+                     }, 
+            		 'colvis'
+        		],
+        		
+        		
+        		
+        		select: true,			//RENDO SELEZIONABILI LE RIGHE DELLA TABELLA 
+        		
+                data: p,
+                
+                columns: [ // should be 'ID' 'Name' 'Surname' 'Dweling address' 'Selected risk score' 'Selected barriers score'
+                    {data: 'id', title: '#'},
+                    {data: 'name', title: 'Name'},
+                    {data: 'surname', title: 'Surname'},
+                    {data: 'Address', title: 'Address'},
+                    {data: 'City', title: 'City'},
+                    {data: 'Postal', title: 'Postal'},
+                    {data: 'Country', title: 'Country'}
+                ]
+                
+	  			
+	 	
+                
+                
+            });
+
+          
+
+            // DO NOT FOLLOW ADVICE (importing makes map disappear!)
+            mymap = L.map('mapid', {
+                attributionControl: false,
+                scrollWheelZoom: true,
+                doubleClickZoom: true,
+                zoomControl: true,
+                touchZoom: true,
+                dragging: true,
+            });
+
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mymap);
+            mymap.setView([44.6979999,10.6298284], 12);
+           	//aggiunge il pulsante della ricerca sulla mappa (quello con la lente di ingrandimento)
+        	
+        	var geocoder = L.Control.geocoder({
+        							collapsed:false,
+        					}).addTo(mymap);
+        	
+        	
+        	
+    
+    
+//ACCEDO AL VALORE VERO O FALSO DEL CHECKBOX
+var checkBox=document.getElementById("myCheck");
+
+
+/*
+
+//QUESTA FUNZIONE SI ATTIVA OGNI VOLTA CHE IL CENTRO DELLA MAPPA CAMBIA (SIA CON IL TRASCINAMENTO CHE CON LO ZOOM)
+mymap.on('moveend', function(e) {
+	if(checkBox.checked){		//TUTTO QUELLO CHE LA FUNZIONE FA SI ATTIVA SOLO SE IL CHECKBOX E' CHECKED
+		var CentroMappa = L.latLng(mymap.getCenter());   //ACQUISISCO LE COORDINATE DEL CENTRO DELLA MAPPA
+		var z = mymap.getBounds();   //ACQUISISCO I DUE VERTICI CHE DETERMINANO I LIMITI DELLA MAPPA
+   		var latitudineNE = z._northEast.lat;     //QUESTA E' LA LATITUDINE MASSIMA
+   		var longitudineNE = z._northEast.lng;	 //QUESTA E' LA LONGITUDINE MASSIMA
+   		var latitudineSW = z._southWest.lat;	 //QUESTA E' LA LATITUDINE MINIMA
+   		var longitudineSW = z._southWest.lng;	 //QUESTA E' LA LONGITUDINE MINIMA
+		for (var i = 0; i < p.length; i++) {
+			//console.log(p[i]);
+			var presente = false;
+			
+			L.esri.Geocoding.geocode().address(p[i].Address).city(p[i].City).country(p[i].Country).postal(p[i].Postal).run(function(err, results, response){
+  				//console.log(results.results[0].latlng);
+  				var x = results.results[0].latlng;
+			
+			
+			if (x.lat <= latitudineNE && x.lat >= latitudineSW && x.lng <= longitudineNE && x.lng >= longitudineSW ){  //MI CHIEDO SE IL MARKER E' VISUALIZZATO
+				
+				//scorro le righe della tabella e se la riga non è presente allora la aggiungo
+				var table = $('#patientsTable').DataTable();
+				table.rows().every( function () {
+					if(this.data()!=undefined) { //senza questo comando non funziona perchè cerca di accedere a una riga che potrebbe essere stata cancellata
+						L.esri.Geocoding.geocode().address(this.data().Address).city(this.data().City).country(this.data().Country).postal(this.data().Postal).run(function(err, results, response){
+  							var y = results.results[0].latlng;	
+							if(y.lat == x.lat && y.lng == x.lng)
+ 		 								presente=true;
+						});
+					}
+				});
+				
+				if(presente==false){
+					table.row.add( p[i] ).draw();
+				 				 
+				}
+				
+			}
+			
+			else
+				{		
+							var table = $('#patientsTable').DataTable();
+							
+							table.rows().every( function () {
+								
+								if(this.data()!=undefined){ //senza questo comando non funziona perchè cerca di accedere a una riga che potrebbe essere stata cancellata
+   								 	L.esri.Geocoding.geocode().address(this.data().Address).city(this.data().City).country(this.data().Country).postal(this.data().Postal).run(function(err, results, response){
+  										var y = results.results[0].latlng;	
+										if(y.lat == x.lat && y.lng == x.lng)
+ 		 									table.row(this).remove().draw();
+						});
+ 		 								
+ 		 						}
+  
+							} );
+ 				}
+		}
+	});
+	
+	}
+} );   //FINE DELLA FUNZIONE
+  
+  
+  */   
+     
+ /*    
+            
+            
+       //FUNZIONE CHE SI ATTIVA QUANDO CLICCO SUL PULSANTE "TROVA SULLA MAPPA"     
+            $("#b").click(function(){
+             	var table = $('#patientsTable').DataTable();
+             	//Creo un array che conterrà le coordinate dei punti selezionati in tabella
+ 				var arrayOfLatLngs = [];
+ 				
+ 				//COME PRIMA COSA CHIUDO TUTTI I POPUP
+ 				table.rows().every( function () {
+					for(var k=0; k<markers.length; k++){
+						//console.log(markers[k]);
+						if(this.data().lat== markers[k].getLatLng().lat && this.data().lng==markers[k].getLatLng().lng){
+							markers[k].closePopup();	
+						}
+					}
+				});
+            
+            	//ORA SCORRO LE RIGHE SELEZIONATE
+				table.rows( '.selected' ).every( function () {
+				var latlng = L.latLng(this.data().lat, this.data().lng);
+		        arrayOfLatLngs[arrayOfLatLngs.length]=latlng;
+		 
+				for(var k=0; k<markers.length; k++){
+					if(this.data().lat == markers[k].getLatLng().lat && this.data().lng==markers[k].getLatLng().lng){
+						markers[k].openPopup();
+			}
+		}
+	});
+				
+			var bounds = new L.LatLngBounds(arrayOfLatLngs);
+			mymap.fitBounds(bounds,{padding: [100,100]});
+            });
+                 
+                 
+   */              
+                 
+                  
+            
+
+            $("#gma").click(function () {
+                gmaFunction();
+            });
+            $("#barthel").click(function () {
+                barthelFunction();
+            });
+            $("#asa").click(function () {
+                asaFunction();
+            });
+            $("#lace").click(function () {
+                laceFunction();
+            });
+            $("#charlson").click(function () {
+                charlsonFunction();
+            });
+            
+            $("#greenDrop").on('change', function () {
+                if (hideGreen) {
+                    hideGreen = false;
+                    SyncMarkerAddRow();
+                } else {
+                    hideGreen = true;
+                    SyncMarkerRemoveRow(greenColour);
+                }
+                findFilter();
+            });
+            
+            $("#orangeDrop").on('change', function () {
+                if (hideOrange) {
+                    hideOrange = false;
+               		SyncMarkerAddRow();         
+                } else {
+                    hideOrange = true;
+                       SyncMarkerRemoveRow(orangeColour);
+   
+                }
+                findFilter();
+            });
+            $("#redDrop").on('change', function () {
+                if (hideRed) {
+                    hideRed = false;
+                    SyncMarkerAddRow();
+                } else {
+                    hideRed = true;
+                          SyncMarkerRemoveRow(redColour);
+   
+                }
+                findFilter();
+            });
+            $("#toggleBlink").click(function () {
+                if (stopBlink) {
+                    stopBlink = false;
+                } else {
+                    stopBlink = true;
+                }
+                findFilter();
+            });
+            $('#retrieval').on('change', function () {
+                if (retrieval) {
+                    retrieval = false;
+                } else {
+                    retrieval = true;
+                }
+                findFilter();
+            });
+            $('#selfcare').on('change', function () {
+                if (selfcare) {
+                    selfcare = false;
+                } else {
+                    selfcare = true;
+                }
+                findFilter();
+            });
+            $('#dwelling').on('change', function () {
+                if (dwelling) {
+                    dwelling = false;
+                } else {
+                    dwelling = true;
+                }
+                findFilter();
+            });
+            $('#carer').on('change', function () {
+                if (carer) {
+                    carer = false;
+                } else {
+                    carer = true;
+                }
+                findFilter();
+            });
+            $('#checkAll').change(function (e) {
+                if (e.currentTarget.active) {
+                    $('.checkbox-inline').find('input[type="checkbox"]').prop('checked', true).change();
+                } else {
+                    $('.checkbox-inline').find('input[type="checkbox"]').prop('checked', false).change();
+                }
+            });
+            $("#checkAll").click(function () {
+                if (checkAllBarriers) {
+                    checkAllBarriers = false;
+                } else {
+                    checkAllBarriers = true;
+                }
+                $('.checkbox-inline').find('input[type="checkbox"]').prop('checked', checkAllBarriers).change();
+            });
+        });
+        
+        
+        
+
+        google.charts.load('current', {'packages': ['corechart']});
+        const p = [];
+        let selectedIcon = "";
+
+/*
+
+        setInterval(function () {
+            if (cacheHit) {
+                console.log("New data available!");
+                cacheHit = false;
+                $('#patientsTable').DataTable().clear();
+                p.forEach(e => {
+                    $('#patientsTable').DataTable().row.add(e).draw();
+                })
+            } else {
+                console.log("No new data to show");
+            }
+        }, 5000);
+*/
+
+        //colori icone
+        const baseColour = '#583470';
+        const redColour = '#E10000';
+        const orangeColour = '#FF6600';
+        const greenColour = '#00CC33';
+
+        let lace = false;
+        let charlson = false;
+        let gma = false;
+        let barthel = false;
+        let asa = false;
+
+        //funzioni
+        function getIcon(colour, message, alert, stopBlink) {
+            const markerHtmlStyles = `
+    	    	  background-color: ${colour};
+    	    	  width: 3rem;
+    	    	  height: 3rem;
+    	    	  display: block;
+    	    	  left: -1.5rem;
+    	    	  top: -1.5rem;
+    	    	  position: relative;
+    	    	  border-radius: 3rem 3rem 0;
+    	    	  transform: rotate(45deg);
+    	    	  border: 1px solid #FFFFFF`;
+            const iconBlinking = L.divIcon({
+                className: "blinking",
+                iconAnchor: [0, 24],
+                labelAnchor: [-6, 0],
+                popupAnchor: [0, -36],
+                html: `<span style="${markerHtmlStyles}" />`
+            });
+            const icon = L.divIcon({
+                className: "normal",
+                iconAnchor: [0, 24],
+                labelAnchor: [-6, 0],
+                popupAnchor: [0, -36],
+                html: `<span style="${markerHtmlStyles}" />`
+            });
+            if (!stopBlink) {
+                if (alert || message) {
+                    return iconBlinking;
+                } else {
+                    return icon;
+                }
+            } else {
+                return icon;
+            }
+        }
+
+        function findFilter() {
+            if (lace) {
+                laceFunction();
+            } else if (gma) {
+                gmaFunction();
+            } else if (charlson) {
+                charlsonFunction();
+            } else if (barthel) {
+                barthelFunction();
+            } else if (asa) {
+                asaFunction();
+            }/* else if (hideGreen) {
+                for (let i = 0; i < p.length; i++) {
+                    mymap.removeLayer(this["marker" + i]);
+                }
+            }*/ else {
+                loadPatients();
+            }
+        }
+
+        function findOpacity(i) {
+            let out = 0;
+            let x = Number(0);
+            let val = Number(0);
+            if (skills) {
+                x += Number(3);
+                val += Number(p[i].skills) + Number(1);
+            }
+            if (retrieval) {
+                x += Number(2);
+                if (p[i].retrieval === "YES") {
+                    val += Number(1);
+                }
+                if (p[i].retrieval === "NO") {
+                    val += Number(3);
+                }
+            }
+            if (selfcare) {
+                x += Number(3);
+                val += Number(p[i].selfcare) + Number(1);
+            }
+            if (dwelling) {
+                x += Number(3);
+                val += Number(p[i].dwelling) + Number(1);
+            }
+            if (carer) {
+                x += Number(2);
+                val += Number(p[i].carer) + Number(1);
+            }
+            if (x === 0) {
+                out = 1;
+            } else {
+                const unit = (Number(1) / Number(x));
+                out = unit * Number(val) - 0.2;
+            }
+            if (x === 7 || x === 8 || x === 9) {
+                out = casesThree(x, val);
+            }
+            if (x === 11 || x === 12 || x === 13) {
+                out = casesFour(x, val);
+            }
+            if (hideGreen) {
+                if (p[i].iconTemporaryColour === baseColour || p[i].iconTemporaryColour === greenColour) {
+                    out = 0;
+                }
+            }
+            if (hideOrange) {
+                if (p[i].iconTemporaryColour === orangeColour) {
+                    out = 0;
+                }
+            }
+            if (hideRed) {
+                if (p[i].iconTemporaryColour === redColour) {
+                    out = 0;
+                }
+            }
+            return out;
+        }
+
+        function casesThree(tot, rel) {
+            let out = 0;
+            const wall = (Number(1) / Number(tot)) * Number(rel);
+            if (wall > Number(0.8)) {
+                out = 1;
+            }
+            if (wall > Number(0.4) && wall <= Number(0.8)) {
+                out = 0.5;
+            }
+            if (wall <= Number(0.4)) {
+                out = 0.1;
+            }
+            return out;
+        }
+
+        function casesFour(tot, rel) {
+            let out = 0;
+            if (Number(tot / rel) <= Number(1)) {
+                out = 1;
+            }
+            if (Number(tot / rel) > Number(1) && Number(tot / rel) <= Number(1.5)) {
+                out = 0.5;
+            }
+            if (Number(tot / rel) > Number(1.5) && Number(tot / rel) <= Number(3)) {
+                out = 0.1;
+            }
+            return out;
+        }
+
+        function loadPatients(data) {
+        	
+            console.log("loadPatients data:");
+            
+            console.log(data);
+            let i = 0;
+            if (data != undefined) {
+                data.forEach(e => {
+                    p.push({
+                        id: i,
+                        name: e.name,
+                        surname: e.surname,
+                        photo: e.imgpath,
+                        asa: e.asa,
+                        barthel: e.barthel,
+                        charlson: e.charlson,
+                        lace: e.lace,
+                        gma: e.gma,
+                        carer: e.carer,
+                        dwelling: e.dwelling,
+                        retrieval: e.retrieval,
+                        selfcare: e.selfcare,
+                        skills: e.skills,
+                        messaggi: e.nmessages,
+                        alert: e.nalerts,
+                        iconTemporaryColour: "",
+                        checkMessage: false,
+                        checkAlert: false,
+                        Address: e.Address,
+                        City: e.City,
+                        Postal: e.Postal,
+                        Country: e.Country,
+                        Lat: "",
+                        Lng: "" 
+                    });
+                    i++;
+                });
+            }
+            console.log("loadPatients p (length: %s):", p.length);
+            
+            console.log(p);
+            
+            
+            
+            for (let i = 0; i < p.length; i++) {     
+
+            //x rappresenta le coordinate associate a p[i]
+            var x;
+           
+            L.esri.Geocoding.geocode().address(p[i].Address).city(p[i].City).country(p[i].Country).postal(p[i].Postal).run(function(err, results, response){
+  				//console.log(results.results[0].latlng);
+				
+				let Promise = new Promise((resolve, reject) => {
+					p[i].Lat=results.results[0].latlng.lat;
+					p[i].Lng=results.results[0].latlng.lng;
+				});
+				
+				let result = await promise;
+				
+			});
+			    
+                p[i].icontTemporaryColour = baseColour;
+                if (p[i].messaggi !== 0) {
+                    p[i].checkMessage = true;
+                }
+                
+                
+                if (p[i].alert !== 0) {
+                    p[i].checkAlert = true;
+                }
+                
+                console.log(p[i].Lat);
+                selectedIcon = getIcon(baseColour, p[i].checkMessage, p[i].checkAlert, stopBlink);
+                
+                if (p[i].checkMessage || p[i].checkAlert) {
+                    if (p[i].checkMessage) {
+                        this["marker" + i] = L.marker([p[i].Lat, p[i].Lng], {icon: selectedIcon}).bindPopup("<div class='container-fluid' style='margin-top: 20px;'><div class='row'><div class='col-lg-12 text-center'><img src='" + p[i].photo + "' class='img-circle imgpatient text-center'></div><div class='row'><div class='col-lg-12 text-center'><h4>" + p[i].name + " " + p[i].surname + "</h4></div></div></div><div class='row'><div class='col-lg-12 text-center'><h6><a href=''><span class='glyphicon glyphicon-alert'></span> Pending alerts: " + p[i].alert + "</a></h6></div></div></div><div class='row text-center'><button class='btn btn-warning'>Go to summary</button></div></div>",{autoClose: false});
+                    }
+                    if (!p[i].checkAlert) {
+                        this["marker" + i] = L.marker([p[i].Lat, p[i].Lng], {icon: selectedIcon}).bindPopup("<div class='container-fluid' style='margin-top: 20px;'><div class='row'><div class='col-lg-12 text-center'><img src='" + p[i].photo + "' class='img-circle imgpatient text-center'></div><div class='row'><div class='col-lg-12 text-center'><h4>" + p[i].name + " " + p[i].surname + "</h4></div></div></div><div class='row'><div class='col-lg-12 text-center'><h6><a href=''><span class='glyphicon glyphicon-envelope'></span> Pending messages: " + p[i].messaggi + "</a></h6></div></div></div><div class='row text-center'><button class='btn btn-warning'>Go to summary</button></div></div>",{autoClose: false});
+                    }
+                    if (p[i].checkMessage && p[i].checkAlert) {
+                        this["marker" + i] = L.marker([p[i].Lat, p[i].Lng], {icon: selectedIcon}).bindPopup("<div class='container-fluid' style='margin-top: 20px;'><div class='row'><div class='col-lg-12 text-center'><img src='" + p[i].photo + "' class='img-circle imgpatient text-center'></div><div class='row'><div class='col-lg-12 text-center'><h4>" + p[i].name + " " + p[i].surname + "</h4></div></div></div><div class='row'><div class='col-lg-12 text-center'><h6><a href=''><span class='glyphicon glyphicon-envelope'></span> Pending messages: " + p[i].messaggi + "</a><br><a href=''><span class='glyphicon glyphicon-alert'></span> Pending alerts: " + p[i].alert + "</a></h6></div></div></div><div class='row text-center'><button class='btn btn-warning'>Go to summary</button></div></div>",{autoClose: false});
+                    }
+                } else {
+                    this["marker" + i] = L.marker([p[i].Lat, p[i].Lng], {icon: selectedIcon}).bindPopup("<div class='container-fluid' style='margin-top: 20px;'><div class='row'><div class='col-lg-12 text-center'><img src='" + p[i].photo + "' class='img-circle imgpatient text-center'></div><div class='row'><div class='col-lg-12 text-center'><h4>" + p[i].name + " " + p[i].surname + "</h4></div></div></div><div class='row text-center'><button class='btn btn-warning'>Go to summary</button></div></div>",{autoClose: false});
+                }
+                const alpha = findOpacity(i);
+                this["marker" + i].setOpacity(alpha);
+                mymap.addLayer(this["marker" + i])
+                markers[markers.length]=(this["marker" + i]);
+           
+              
+            }
+            
+           
+            
+        }
+
+        function changeIcon(colour, i) {
+            selectedIcon = getIcon(colour, p[i].checkMessage, p[i].checkAlert, stopBlink);
+            const x = findOpacity(i);
+            this["marker" + i].setIcon(selectedIcon);
+            this["marker" + i].setOpacity(x);
+        }
+
+        function gmaFunction() {
+            gma = true;
+            lace = false;
+            charlson = false;
+            barthel = false;
+            asa = false;
+            for (let i = 0; i < p.length; i++) {
+                if (p[i].gma > 0 && p[i].gma < 3) {
+                    p[i].iconTemporaryColour = greenColour;
+                    changeIcon(greenColour, i);
+                }
+                if (p[i].gma === 3) {
+                    p[i].iconTemporaryColour = orangeColour;
+                    changeIcon(orangeColour, i);
+                }
+                if (p[i].gma === 4) {
+                    p[i].iconTemporaryColour = redColour;
+                    changeIcon(redColour, i);
+                }
+            }
+        }
+
+        function laceFunction() {
+            gma = false;
+            lace = true;
+            charlson = false;
+            barthel = false;
+            asa = false;
+            let i;
+            const laceVal = [];
+            const laceValUnique = [];
+            for (i = 0; i < p.length; i++) {
+                laceVal.push(p[i].lace);
+                laceValUnique.push(p[i].lace);
+            }
+            laceVal.sort(function (a, b) {
+                return a - b;
+            });
+            $.unique(laceValUnique);
+            laceValUnique.sort(function (a, b) {
+                return a - b;
+            });
+            let absoluteFreq = {};
+            for (i = 0; i < laceValUnique.length; i++) {
+                let cnt = 0;
+                for (let j = 0; j < laceVal.length; j++) {
+                    if (laceValUnique[i] === laceVal[j]) { // (NO, apparently) could be buggy because of === instead of ==?
+                        cnt++;
+                    }
+                }
+                absoluteFreq[laceValUnique[i].toString()] = cnt; // (FIXED) could be buggy because laceVal and laceValUnique are no longer strings?
+            }
+            let comulatedFreq = {};
+            let com = Number(0);
+            let max;
+            for (let k in absoluteFreq) { // iterates fields of object as strings
+                com += Number(absoluteFreq[k]); // (NO, apparently)  could be buggy because already a number?
+                comulatedFreq[k] = Number(com); // (NO, apparently)  could be buggy because already a number?
+                max = Number(comulatedFreq[k]);
+            }
+            for (let k in comulatedFreq) {
+                for (i = 0; i < p.length; i++) {
+                    if (k === p[i].lace.toString()) { // (FIXED) could be buggy because .lace is no longer string?
+                        if (comulatedFreq[k] <= (max / 3)) {
+                            p[i].iconTemporaryColour = greenColour;
+                            changeIcon(greenColour, i)
+                        }
+                        if (comulatedFreq[k] > (max / 3) && comulatedFreq[k] <= 2 * (max / 3)) {
+                            p[i].iconTemporaryColour = orangeColour;
+                            changeIcon(orangeColour, i)
+                        }
+                        if (comulatedFreq[k] > 2 * (max / 3) && comulatedFreq[k] <= max) {
+                            p[i].iconTemporaryColour = redColour;
+                            changeIcon(redColour, i)
+                        }
+                    }
+                }
+            }
+
+        }
+
+        function charlsonFunction() {
+            gma = false;
+            lace = false;
+            charlson = true;
+            barthel = false;
+            asa = false;
+            let i;
+            let charlsonVal = [];
+            let charlsonValUnique = [];
+            for (i = 0; i < p.length; i++) {
+                charlsonVal.push(p[i].charlson);
+                charlsonValUnique.push(p[i].charlson);
+            }
+            charlsonVal.sort(function (a, b) {
+                return a - b;
+            });
+            $.unique(charlsonValUnique);
+            charlsonValUnique.sort(function (a, b) {
+                return a - b;
+            });
+            let absoluteFreq = {};
+            for (i = 0; i < charlsonValUnique.length; i++) {
+                let cnt = 0;
+                for (let j = 0; j < charlsonVal.length; j++) {
+                    if (charlsonValUnique[i] === charlsonVal[j]) {
+                        cnt++;
+                    }
+                }
+                absoluteFreq[charlsonValUnique[i].toString()] = cnt;
+            }
+            let comulatedFreq = {};
+            let com = Number(0);
+            let max;
+            for (let k in absoluteFreq) {
+                com += Number(absoluteFreq[k]);
+                comulatedFreq[k] = Number(com);
+                max = Number(comulatedFreq[k]);
+            }
+            for (let k in comulatedFreq) {
+                for (i = 0; i < p.length; i++) {
+                    if (k === p[i].charlson.toString() && p[i].charlson >= 3) {
+                        if (comulatedFreq[k] <= (max / 3)) {
+                            p[i].iconTemporaryColour = greenColour;
+                            changeIcon(greenColour, i);
+                        }
+                        if (comulatedFreq[k] > (max / 3) && comulatedFreq[k] <= 2 * (max / 3)) {
+                            p[i].iconTemporaryColour = orangeColour;
+                            changeIcon(orangeColour, i);
+                        }
+                        if (comulatedFreq[k] > 2 * (max / 3) && comulatedFreq[k] <= max) {
+                            p[i].iconTemporaryColour = redColour;
+                            changeIcon(redColour, i);
+                        }
+                    }
+                    if (p[i].charlson < 3) {
+                        p[i].iconTemporaryColour = baseColour;
+                        changeIcon(baseColour, i);
+                    }
+                }
+            }
+
+        }
+
+        function barthelFunction() {
+            gma = false;
+            lace = false;
+            charlson = false;
+            barthel = true;
+            asa = false;
+            for (let i = 0; i < p.length; i++) {
+                if (p[i].barthel <= 60) {
+                    p[i].iconTemporaryColour = redColour;
+                    changeIcon(redColour, i);
+                }
+                if (p[i].barthel >= 61 && p[i].barthel <= 90) {
+                    p[i].iconTemporaryColour = orangeColour;
+                    changeIcon(orangeColour, i);
+                }
+                if (p[i].barthel >= 91 && p[i].barthel <= 99) {
+                    p[i].iconTemporaryColour = greenColour;
+                    changeIcon(greenColour, i);
+                }
+            }
+        }
+
+        function asaFunction() {
+            gma = false;
+            lace = false;
+            charlson = false;
+            barthel = false;
+            asa = true;
+            for (let i = 0; i < p.length; i++) {
+                if (p[i].asa === "II") {
+                    p[i].iconTemporaryColour = greenColour;
+                    changeIcon(greenColour, i);
+                } else if (p[i].asa === "III") {
+                    p[i].iconTemporaryColour = redColour;
+                    changeIcon(redColour, i);
+                } else {
+                    p[i].iconTemporaryColour = baseColour;
+                    changeIcon(baseColour, 1);
+                }
+            }
+        }
+        
+        
+//QUESTA FUNZIONE SI ATTIVA OGNI VOLTA CHE CLICCO SUL CHECKBOX
+function myFunction() {
+checkBox = document.getElementById("myCheck");
+
+ // QUESTA FUNZIONE SI ATTIVA IN QUESTO CASO QUANDO CLICCO SUL CHECKBOX. PRIMA HO FATTO IN MODO CHE SI ATTIVASSE AD OGNI SPOSTAMENTO DELLA MAPPA
+	if(checkBox.checked){
+		var CentroMappa = L.latLng(mymap.getCenter());   //ACQUISISCO LE COORDINATE DEL CENTRO DELLA MAPPA
+		var z = mymap.getBounds();   //ACQUISISCO I DUE VERTICI CHE DETERMINANO I LIMITI DELLA MAPPA
+   		var latitudineNE = z._northEast.lat;     //QUESTA E' LA LATITUDINE MASSIMA
+   		var longitudineNE = z._northEast.lng;	 //QUESTA E' LA LONGITUDINE MASSIMA
+   		var latitudineSW = z._southWest.lat;	 //QUESTA E' LA LATITUDINE MINIMA
+   		var longitudineSW = z._southWest.lng;	 //QUESTA E' LA LONGITUDINE MINIMA
+   		
+		for (var i = 0; i < p.length; i++) {
+			var presente = false;
+			//console.log(p[i]);
+			var x;
+			L.esri.Geocoding.geocode().address(p[i].Address).city(p[i].City).country(p[i].Country).postal(p[i].Postal).run(function(err, results, response){	
+  				x = results.results[0].latlng;
+  				
+  				
+
+			if (x.lat <= latitudineNE && x.lat >= latitudineSW && x.lng <= longitudineNE && x.lng >= longitudineSW ){  //MI CHIEDO SE IL MARKER E' VISUALIZZATO
+		
+				//scorro le righe della tabella e se la riga non è presente allora la aggiungo
+				
+				var table = $('#patientsTable').DataTable();
+				
+				table.rows().every( function () {
+				//console.log(this.data());
+				
+					if(this.data()!=undefined){  //senza questo comando non funziona perchè cerca di accedere a una riga che potrebbe essere stata cancellata
+							
+							
+							
+							L.esri.Geocoding.geocode().address(this.data().Address).city(this.data().City).country(this.data().Country).postal(this.data().Postal).run(function(err, results, response){
+							 var y = results.results[0].latlng;
+							 
+								if(y.lat == x.lat && y.lng == x.lng){
+ 		 								presente=true;
+ 		 								
+ 		 								}
+ 		 					
+							});
+							
+				 }
+				 
+				});
+				
+				
+				if(presente==false){
+				//	table.row.add(p[i]).draw();
+				 //	console.log(p[i]);	
+				 //console.log("ciao");		 
+				}
+				
+			}
+			
+			else
+				{		
+				
+						console.log(x);
+							var table = $('#patientsTable').DataTable();
+							var c;
+							table.rows().every( function () {
+							
+								if(this.data()!=undefined){ //senza questo comando non funziona perchè cerca di accedere a una riga che potrebbe essere stata cancellata
+   									
+   									
+   									c=this.data().id;
+   									
+   									//console.log(this.data().id);
+   									//QUI E' L'ERRORE
+   									
+   									
+   									
+   									console.log(L.esri.Geocoding.geocode().params);
+   									
+   									L.esri.Geocoding.geocode().address(this.data().Address).city(this.data().City).country(this.data().Country).postal(this.data().Postal).run(function(err, results, response){
+   									var y = results.results[0].latlng;
+   									//console.log(y);
+   									
+   									/*
+   									
+   									if(y.lat == x.lat && y.lng == x.lng){
+										//console.log(y);
+										//console.log(c);
+										
+										
+										
+											table.rows().every( function () {
+												//console.log(this.data());
+												if(this.data().id==c)
+													//console.log(this.data());
+													//table.row(this).remove().draw();
+											});
+											
+											
+										}
+   									
+   									
+   									*/
+   									
+   									});
+   									
+   									
+ 		 							
+ 		 							
+								
+									
+ 		 						}
+ 
+							});
+ 					
+ 				}
+		
+		});
+		
+			
+		}
+	}
+	
+	//SE NON E' CHECKED
+	else{
+		mymap.setView([44.6979999,10.6298284], 12);
+	}
+
+} 
+ 
+ 
+function SyncMarkerAddRow() {
+	//Voglio aggiungere le righe che non ci sono
+					var checkBox=document.getElementById("myCheck");
+					if(checkBox.checked){	
+                    var CentroMappa = L.latLng(mymap.getCenter());   //ACQUISISCO LE COORDINATE DEL CENTRO DELLA MAPPA
+					var z = mymap.getBounds();   //ACQUISISCO I DUE VERTICI CHE DETERMINANO I LIMITI DELLA MAPPA
+   					var latitudineNE = z._northEast.lat;     //QUESTA E' LA LATITUDINE MASSIMA
+   					var longitudineNE = z._northEast.lng;	 //QUESTA E' LA LONGITUDINE MASSIMA
+   					var latitudineSW = z._southWest.lat;	 //QUESTA E' LA LATITUDINE MINIMA
+   					var longitudineSW = z._southWest.lng;	 //QUESTA E' LA LONGITUDINE MINIMA
+                    for(var i = 0; i<p.length; i++){
+                    	var presente = false;
+						if (p[i].lat <= latitudineNE && p[i].lat >= latitudineSW && p[i].lng <= longitudineNE && p[i].lng >= longitudineSW){  //MI CHIEDO SE IL MARKER E' VISUALIZZATO
+							//scorro le righe della tabella e se la riga non è presente allora la aggiungo
+								var table = $('#patientsTable').DataTable();
+								table.rows().every( function () {
+									if(this.data()!=undefined) //senza questo comando non funziona perchè cerca di accedere a una riga che potrebbe essere stata cancellata
+					
+									if(this.data().lat == p[i].lat && this.data().lng == p[i].lng)
+ 		 								presente=true;
+								});
+				
+								if(presente==false){
+									table.row.add(p[i]).draw();
+				 				 
+								}
+				
+						}
+         		}
+         }
+}
+
+
+
+function SyncMarkerRemoveRow(colour){
+					//Scorro le righe della tabella
+					var checkBox=document.getElementById("myCheck");
+					if(checkBox.checked){	
+                    var table = $('#patientsTable').DataTable();
+                    table.rows().every( function () {
+                   		//Tolgo le righe della tabella corrispondenti ai marker verdi
+                    	if(this.data()!=undefined)
+                    	if (this.data().iconTemporaryColour === baseColour || this.data().iconTemporaryColour === colour) {
+                    		 for(var k=0; k<markers.length; k++){
+								if(this.data().lat == markers[k].getLatLng().lat && this.data().lng==markers[k].getLatLng().lng){
+										markers[k].closePopup();	
+								}
+								
+								}
+								table.row(this).remove().draw();
+                    	}
+                    });
+                    
+                 }
+}
+ 	
+ 
+          
+       
+
+    </script>
+
+    <style>
+        #mapid {
+            height: 600px;
+            overflow: hidden;
+        }
+
+        td {
+            padding: 0 10px 0 10px
+        }
+
+        .logo {
+            margin-left: 20px;
+            height: 100px;
+        }
+
+        .form-check-label {
+            font-weight: normal;
+        }
+
+        .toggle-all {
+            font-size: 12px;
+            font-weight: normal;
+            text-align: center;
+            border: 1px solid #563d7c;
+            border-radius: 0;
+            vertical-align: middle;
+        }
+
+        .botdrop {
+            background-color: #563d7c;
+            opacity: 0.8;
+            display: inline-block;
+            padding: 6px 12px;
+            color: white;
+            margin: 1%;
+            font-size: 12px;
+            font-weight: normal;
+            line-height: 1.428571429;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            cursor: pointer;
+            border: 1px solid #563d7c;
+            border-radius: 0;
+            height: 40px;
+            width: 160px;
+        }
+
+        .botdrop:hover {
+            background-color: #563d7c;
+            display: inline-block;
+            padding: 6px 12px;
+            margin-bottom: 0;
+            font-size: 12px;
+            color: white;
+            font-weight: normal;
+            /*line-height: 1.428571429;*/
+            text-align: center;
+            align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            cursor: pointer;
+            border: 1px solid grey;
+            border-radius: 0;
+            /*height: 40px;
+            width: 160px;*/
+        }
+
+        thead th {
+            background-color: rgba(86, 61, 124, 0.8);
+            color: white;
+        }
+
+        .sp {
+            margin-top: 20px;
+        }
+
+        .imgpatient {
+            height: 50px;
+        }
+
+        /* DO NOT REMOVE, ACTUALLY USED (leaflet)*/
+        .blinking {
+            animation: fade 1s infinite alternate;
+        }
+
+        @keyframes fade {
+            from {
+                opacity: 0;
+            }
+        }
+
+        @keyframes check {
+            0% {
+                height: 0;
+                width: 0;
+            }
+            25% {
+                height: 0;
+                width: 20px;
+            }
+            50% {
+                height: 40px;
+                width: 10px;
+            }
+        }
+
+        /*.checkbox span {
+            display: block;
+            height: 28px;
+            position: relative;
+            width: 28px;
+            padding: 0
+        }
+
+        .checkbox span:after {
+            -moz-transform: scaleX(-1) rotate(135deg);
+            -ms-transform: scaleX(-1) rotate(135deg);
+            -webkit-transform: scaleX(-1) rotate(135deg);
+            transform: scaleX(-1) rotate(135deg);
+            -moz-transform-origin: left top;
+            -ms-transform-origin: left top;
+            -webkit-transform-origin: left top;
+            transform-origin: left top;
+            border-right: 4px solid #fff;
+            border-top: 4px solid #fff;
+            content: '';
+            display: block;
+            height: 20px;
+            left: 3px;
+            position: absolute;
+            top: 15px;
+            width: 10px
+        }
+
+        .checkbox span:hover:after {
+            border-color: #583470
+        }
+
+        .checkbox input {
+            display: none
+        }
+
+        .checkbox input:checked + span:after {
+            -webkit-animation: check .8s;
+            -moz-animation: check .8s;
+            -o-animation: check .8s;
+            animation: check .8s;
+            border-color: #555
+        }
+
+        .checkbox input:checked + .default:after {
+            border-color: #444
+        }
+
+        .checkbox input:checked + .primary:after {
+            border-color: #2196F3
+        }
+
+        .checkbox input:checked + .success:after {
+            border-color: #8bc34a
+        }
+
+        .checkbox input:checked + .info:after {
+            border-color: #3de0f5
+        }
+
+        .checkbox input:checked + .warning:after {
+            border-color: #FFC107
+        }
+
+        .checkbox input:checked + .danger:after {
+            border-color: #f44336
+        }*/
+
+        .list-inline {
+            display: flex;
+        }
+
+        .list-inline li {
+            flex: 1;
+            text-align: left;
+        }
+
+        .btn.btn-warning {
+            color: #ffffff;
+            background-color: #583470;
+            border-color: #ffffff;
+        }
+
+        .btn-group.mygroup {
+            white-space: nowrap;
+        }
+
+        .btn.btn-default {
+            float: none;
+        }
+
+    </style>
+
+</head>
+<body background="text1.jpg">
+<div class="container-fluid" style="margin-top: 5px">
+    <div class="row">
+        <div class="col-lg-2 text-center">
+            <img src="photo/logo.png" class="img-rounded logo" alt="Connecare (logo)">
+        </div>
+        <div class="col-lg-8 text-center">
+            <div class="btn-group mygroup dropdown">
+                <button type="button" style="opacity: 0.7" id="toggleGreen"
+                        class="mw-100 btn btn-default botdrop dropdown-toggle" data-toggle="dropdown"
+                        aria-haspopup="true"
+                        aria-expanded="false">
+                    <b>Hide/show green</b> <span class="glyphicon glyphicon-triangle-right" aria-hidden="true"></span>
+                </button>
+                <ul class="list-group dropdown-menu" aria-labelledby="dropdown">
+                    <li class="list-group-item form-check">
+                        <input type="checkbox" class="form-check-input" id="greenDrop">
+                        <label class="form-check-label" for="toggleGreen">
+                            Hide green patients (least severe)
+                        </label>
+                    </li>
+                    <li class="list-group-item form-check">
+                        <input type="checkbox" class="form-check-input" id="orangeDrop">
+                        <label class="form-check-label" for="toggleGreen">
+                            Hide orange patients
+                        </label>
+                    </li>
+                    <li class="list-group-item form-check">
+                        <input type="checkbox" class="form-check-input" id="redDrop">
+                        <label class="form-check-label" for="toggleGreen">
+                            Hide red patients (most severe)
+                        </label>
+                    </li>
+                </ul>
+                <button type="button" style="opacity:0.7"
+                        class="mw-100 btn btn-default botdrop" data-toggle="popover" id="toggleBlink"
+                        data-trigger="hover"
+                        data-placement="bottom"
+                        data-content="Click to enable or disable blinking effect (patients with pending alerts or messages)">
+                    <b>Toggle blinking</b></button>
+            </div>
+        </div>
+        <div class="col-lg-2 text-center">
+            <button type="button" style="opacity:0.7"
+                    class="mw-100 btn btn-default botdrop" data-toggle="popover" id="legend" data-trigger="hover"
+                    data-placement="bottom"
+                    data-html="true"
+                    data-content="<ul><li><font color='red'>Red</font> markers are the most critical patients (according to currently selected risk score)</li><li><font color='green'>Green</font> markers are the least critical</li><li><font color='orange'>Orange</font> markers are inbetween</li></ul>">
+                <b>Map legend</b></button>
+        </div>
+    </div>
+</div>
+<!--<div class="row">
+    <div class="col-lg-12 text-center">
+        <img src="photo/logo.png" class="img-rounded logo" alt="logo" style="margin-top: 30px; margin-bottom: 30px">
+    </div>
+</div>-->
+
+
+<div class="container-fluid" style="margin-top: 20px;">
+    <div class="row">
+        <div class="col-sm-3">
+            <form>
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Search Patient"
+                           style="height: 40px;">
+                    <div class="input-group-btn">
+                        <button class="btn btn-default" type="submit" style="height: 40px;">
+                            <i class="glyphicon glyphicon-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-sm-9">
+            <ul class="list-inline list-group-flush">
+
+                <li class="mw-100 list-group-item" style="text-align: center; background-color: #583470; opacity: 0.8;">
+                    <b
+                            style="color: white;">Risk scores</b>
+
+                <li class="mw-100 list-group-item" style="font-size: 13px; opacity: 0.9;">
+                    <label class="radio-inline"><input type="radio" name="risk-scores" id="lace">LACE<span
+                            class="success"></span></label>
+
+                <li class="mw-100 list-group-item" style="font-size: 13px; opacity: 0.9;">
+                    <label class="radio-inline"><input type="radio" name="risk-scores" id="charlson">Charlson<span
+                            class="success"></span></label>
+
+                <li class="mw-100 list-group-item" style="font-size: 13px; opacity: 0.9;">
+                    <label class="radio-inline"><input type="radio" name="risk-scores" id="gma">GMA<span
+                            class="success"></span></label>
+
+                <li class="mw-100 list-group-item" style="font-size: 13px; opacity: 0.9;">
+                    <label class="radio-inline"><input type="radio" name="risk-scores" id="barthel">Barthel<span
+                            class="success"></span></label>
+
+                <li class="mw-100 list-group-item" style="font-size: 13px; opacity: 0.9;">
+                    <label class="radio-inline"><input type="radio" name="risk-scores" id="asa">ASA<span
+                            class="success"></span></label>
+
+            </ul>
+
+        </div>
+    </div>
+</div>
+
+<br>
+<div class="container-fluid">
+    <div class="row">
+
+        <div class="col-sm-3">
+            <div class="card">
+                <ul class="list-group list-group-flush">
+
+                    <li class="list-group-item"
+                        style="text-align: center; height: 40px; background-color: #583470; opacity: 0.8;"><b
+                            style="color: white;">Barriers</b>
+
+                    <li class="list-group-item" style="height: 40px; font-size: 13px; opacity: 0.9;">
+                        <label class="checkbox-inline"><input type="checkbox" id="skills">Skills to carry out
+                            treatment<span class="success"></span></label>
+
+                    <li class="list-group-item" style="height: 40px; font-size: 13px; opacity: 0.9;">
+                        <label class="checkbox-inline"><input type="checkbox" id="retrieval">Retrieval of
+                            tablets from pharmacy<span
+                                    class="success"></span></label>
+
+                    <li class="list-group-item" style="height: 40px; font-size: 13px; opacity: 0.9;">
+                        <label class="checkbox-inline"><input type="checkbox" id="selfcare">Selfcare skills<span
+                                class="success"></span></label>
+
+                    <li class="list-group-item" style="height: 40px; font-size: 13px; opacity: 0.9;">
+                        <label class="checkbox-inline"><input type="checkbox" id="dwelling">Dwelling<span
+                                class="success"></span></label>
+
+                    <li class="list-group-item" style="height: 40px; font-size: 13px; opacity: 0.9;">
+                        <label class="checkbox-inline"><input type="checkbox" id="carer">Carer skills<span
+                                class="success"></span></label>
+
+                        <!--<li class="list-group-item" style="height: 50px; font-size: 13px; opacity: 0.9;">
+                            <label class="checkbox-inline"><input type="checkbox" id="checkAll">Toggle ALL barriers<span
+                                    class="success"></span></label>-->
+
+                    <li class="list-group-item">
+                        <button type="button" id="checkAll" class="list-group-item list-group-item-action toggle-all"
+                                data-toggle="popover" data-trigger="hover"
+                                data-placement="bottom"
+                                data-content="Click to check or uncheck all the barriers above">Toggle ALL
+                            barriers
+                        </button>
+
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-sm-9">
+            <div id="mapid" style="height: 600px;"></div>
+        </div>
+
+    </div>
+
+    <br>
+    
+    <div><button type="button" id="b" class="btn btn-default">TROVA SULLA MAPPA</button></div>
+    
+    <br>
+    
+    SINCRONIZZA MAPPA E TABELLA: <input type="checkbox" id="myCheck" onclick="myFunction()">
+    
+    <br>
+
+    <div class="row">
+        <div class="col-sm-3">
+        </div>
+        <div class="col-sm-9">
+            <!--<div class="table-responsive">-->
+            <table id="patientsTable" class="table table-striped table-bordered" style="width:100%">
+                <!--<thead class="thead-dark">
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Surname</th>
+                    <th scope="col">Dwelling address</th>
+                    <th scope="col">Selected risk score</th>
+                    <th scope="col">Selected barriers score</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <th scope="row">1</th>
+                    <td>Mark</td>
+                    <td>Otto</td>
+                    <td>@mdo</td>
+                </tr>
+                <tr>
+                    <th scope="row">2</th>
+                    <td>Jacob</td>
+                    <td>Thornton</td>
+                    <td>@fat</td>
+                </tr>
+                <tr>
+                    <th scope="row">3</th>
+                    <td>Larry</td>
+                    <td>the Bird</td>
+                    <td>@twitter</td>
+                </tr>
+                </tbody>-->
+            </table>
+            <!--</div>-->
+        </div>
+    </div>
+</div>
+
+
+
+</body>
+</html>

@@ -1,0 +1,200 @@
+ #mapid {
+            height: 600px;
+            overflow: hidden;
+        }
+
+        td {
+            padding: 0 10px 0 10px
+        }
+
+        .logo {
+            margin-left: 20px;
+            height: 100px;
+        }
+
+        .form-check-label {
+            font-weight: normal;
+        }
+
+        .toggle-all {
+            font-size: 12px;
+            font-weight: normal;
+            text-align: center;
+            border: 1px solid #563d7c;
+            border-radius: 0;
+            vertical-align: middle;
+        }
+
+        .botdrop {
+            background-color: #563d7c;
+            opacity: 0.8;
+            display: inline-block;
+            padding: 6px 12px;
+            color: white;
+            margin: 1%;
+            font-size: 12px;
+            font-weight: normal;
+            line-height: 1.428571429;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            cursor: pointer;
+            border: 1px solid #563d7c;
+            border-radius: 0;
+            height: 40px;
+            width: 160px;
+        }
+
+        .botdrop:hover {
+            background-color: #563d7c;
+            display: inline-block;
+            padding: 6px 12px;
+            margin-bottom: 0;
+            font-size: 12px;
+            color: white;
+            font-weight: normal;
+            /*line-height: 1.428571429;*/
+            text-align: center;
+            align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            cursor: pointer;
+            border: 1px solid grey;
+            border-radius: 0;
+            /*height: 40px;
+            width: 160px;*/
+        }
+
+        thead th {
+            background-color: rgba(86, 61, 124, 0.8);
+            color: white;
+        }
+
+        .sp {
+            margin-top: 20px;
+        }
+
+        .imgpatient {
+            height: 50px;
+        }
+
+        /* DO NOT REMOVE, ACTUALLY USED (leaflet)*/
+        .blinking {
+            animation: fade 1s infinite alternate;
+        }
+
+        @keyframes fade {
+            from {
+                opacity: 0;
+            }
+        }
+
+        @keyframes check {
+            0% {
+                height: 0;
+                width: 0;
+            }
+            25% {
+                height: 0;
+                width: 20px;
+            }
+            50% {
+                height: 40px;
+                width: 10px;
+            }
+        }
+        
+
+        /*.checkbox span {
+            display: block;
+            height: 28px;
+            position: relative;
+            width: 28px;
+            padding: 0
+        }
+
+        .checkbox span:after {
+            -moz-transform: scaleX(-1) rotate(135deg);
+            -ms-transform: scaleX(-1) rotate(135deg);
+            -webkit-transform: scaleX(-1) rotate(135deg);
+            transform: scaleX(-1) rotate(135deg);
+            -moz-transform-origin: left top;
+            -ms-transform-origin: left top;
+            -webkit-transform-origin: left top;
+            transform-origin: left top;
+            border-right: 4px solid #fff;
+            border-top: 4px solid #fff;
+            content: '';
+            display: block;
+            height: 20px;
+            left: 3px;
+            position: absolute;
+            top: 15px;
+            width: 10px
+        }
+
+        .checkbox span:hover:after {
+            border-color: #583470
+        }
+
+        .checkbox input {
+            display: none
+        }
+
+        .checkbox input:checked + span:after {
+            -webkit-animation: check .8s;
+            -moz-animation: check .8s;
+            -o-animation: check .8s;
+            animation: check .8s;
+            border-color: #555
+        }
+
+        .checkbox input:checked + .default:after {
+            border-color: #444
+        }
+
+        .checkbox input:checked + .primary:after {
+            border-color: #2196F3
+        }
+
+        .checkbox input:checked + .success:after {
+            border-color: #8bc34a
+        }
+
+        .checkbox input:checked + .info:after {
+            border-color: #3de0f5
+        }
+
+        .checkbox input:checked + .warning:after {
+            border-color: #FFC107
+        }
+
+        .checkbox input:checked + .danger:after {
+            border-color: #f44336
+        }*/
+
+        .list-inline {
+            display: flex;
+        }
+
+        .list-inline li {
+            flex: 1;
+            text-align: left;
+        }
+
+        .btn.btn-warning {
+            color: #ffffff;
+            background-color: #583470;
+            border-color: #ffffff;
+        }
+
+        .btn-group.mygroup {
+            white-space: nowrap;
+        }
+
+        .btn.btn-default {
+            float: none;
+        }
+       
+       
+       

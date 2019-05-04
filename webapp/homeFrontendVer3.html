@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Connecare</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"> 
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="js/leaflet.css" />
+  <script src="js/leaflet.js"></script>
+  <script src="js/leaflet-providers.js"></script>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <link rel="stylesheet" href="css/font-awesome-4.7.0/css/font-awesome.min.css">
+  <script src="icon.js"></script>
+  
+  
+  
+  <script>  
+  var skills=false; var retrieval=false; var selfcare=false; var dwelling=false; var carer=false ; var removeGreen=false;  var stopBlink=false; 
+ // var loopData = setInterval(getData, 30000);
+  var dataPatients = "";
+  function getData(){}
+
+  $(document).ready(function(){
+    $('[data-toggle="popover"]').popover(); 
+    
+    //prima serie di dati
+    $.ajax({
+		url: "http://localhost:9006/listPatients",
+	    type: 'GET',
+	    dataType: 'text',
+	    }).then(function(data,status){
+	    	loadPatients(data);
+	    	dataPatients=data;
+			})
+
+    mymap = L.map('mapid',{
+        attributionControl: false,
+        scrollWheelZoom: true,
+        doubleClickZoom: true,
+        zoomControl: true,
+        touchZoom: true,
+        dragging: true,
+    });
+    
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(mymap);
+    mymap.setView([37.390073, -5.993171], 6)
+	
+	$("#gma").click(function(){
+				gmaFunction()
+			})
+	$("#barthel").click(function(){
+				barthelFunction()
+			})
+	$("#asa").click(function(){	
+				asaFunction()
+			})
+	$("#lace").click(function(){
+				laceFunction()
+			})
+	$("#charlson").click(function(){
+				charlsonFunction()
+			})
+	$("#delete").click(function(){
+		var text = dataPatients.split("\n")	
+		if(removeGreen==true){
+			removeGreen=false
+			findFilter(text)
+		}
+		else {
+			removeGreen = true
+		findFilter(text)
+			}
+		});
+	$("#stopBlink").click(function(){
+		var text = dataPatients.split("\n")	
+		if(stopBlink==true){
+			stopBlink=false
+			findFilter(text)
+		}
+		else {
+			stopBlink = true
+		findFilter(text)
+			}
+		});
+    //barriere
+	$('#retrieval').on('change',function(){
+		var text = dataPatients.split("\n")	
+		if(retrieval==true){
+			retrieval=false
+			findFilter(text)
+		}
+		else {
+		retrieval = true
+		findFilter(text)
+			}
+		});
+	$('#selfcare').on('change',function(){
+		var text = dataPatients.split("\n")	
+		if(selfcare==true){
+			selfcare=false
+			findFilter(text)
+		}
+		else {
+		selfcare = true
+		findFilter(text)
+			}
+		});
+	$('#dwelling').on('change',function(){		
+		var text = dataPatients.split("\n")	
+		if(dwelling==true){
+			dwelling=false
+			findFilter(text)
+		}
+		else {
+		dwelling = true
+		findFilter(text)
+			}
+		});
+	$('#carer').on('change',function(){
+		var text = dataPatients.split("\n")	
+		if(carer==true){
+			carer=false
+			findFilter(text)
+		}
+		else {
+		carer = true
+		findFilter(text)
+			}
+		});
+}); 
+	
+  google.charts.load('current', {'packages':['corechart']});
+  var mymap
+  var p = []
+  var m = [] 
+  var selectedIcon = ""
+
+    //colori icone
+    	const baseColour = '#583470'
+    	const redColour = '#E10000'
+    	const orangeColour = '#FF6600'
+    	const greenColour = '#00CC33'
+
+    //funzioni
+     function getIcon(colour, message, alert, stopBlink){
+    	    	  const markerHtmlStyles = `
+    	    	  background-color: ${colour};
+    	    	  width: 3rem;
+    	    	  height: 3rem;
+    	    	  display: block;
+    	    	  left: -1.5rem;
+    	    	  top: -1.5rem;
+    	    	  position: relative;
+    	    	  border-radius: 3rem 3rem 0;
+    	    	  transform: rotate(45deg);
+    	    	  border: 1px solid #FFFFFF`
+    	    	  
+    	  const iconBlinking = L.divIcon({
+    	  className: "blinking",
+    	  iconAnchor: [0, 24],
+    	  labelAnchor: [-6, 0],
+    	  popupAnchor: [0, -36],
+    	  html: `<span style="${markerHtmlStyles}" />`
+    	}) 
+    	
+    	const icon = L.divIcon({
+    	    	  className: "normal",
+    	    	  iconAnchor: [0, 24],
+    	    	  labelAnchor: [-6, 0],
+    	    	  popupAnchor: [0, -36],
+    	    	  html: `<span style="${markerHtmlStyles}" />`
+    	    	})  
+    	
+    if(stopBlink==false){
+    	if(alert==true || message==true)
+    	return iconBlinking
+    		else return icon 
+    }
+    else{		if(stopBlink==true)
+    			return icon
+    			else return iconBlinking
+    	}
+   	}     	  
+    	  
+    function findFilter(text){
+    	if(lace==true)   		laceFunction(text)
+    	if(gma==true)			gmaFunction(text)
+    	if(charlson==true)		charlsonFunction(text)
+    	if(barthel==true)		barthelFunction(text)
+    	if(asa==true)			asaFunction(text)
+    	if(lace==false && gma==false && charlson==false && barthel==false && asa==false)	{
+    		for(var i=0; i<p.length;i++)   			mymap.removeLayer(this["marker"+i]);
+    		loadPatients(text)
+    	}
+    }
+    
+    
+    function findOpacity(i){
+    	var out = 0
+    	var x = Number(0)
+    	var val = Number(0)  
+    	if(skills==true){
+    		x+=Number(3)
+    		val += Number(p[i].skills)+Number(1)
+    	}
+    	if(retrieval==true){ 
+        	x+=Number(2)
+        	if(p[i].retrieval=="YES")
+        		val += Number(1)
+        	if(p[i].retrieval=="NO")
+        		val += Number(3)
+    	}
+        if(selfcare==true){
+            x+=Number(3)
+            val += Number(p[i].selfcare)+Number(1)
+        }
+        if(dwelling==true){
+            x+=Number(3)
+            val += Number(p[i].dwelling)+Number(1)
+        }
+        if(carer==true){ 
+            x+=Number(2)
+            val += Number(p[i].carer)+Number(1)
+  	  } 
+        
+        if(x==0)
+        	out = 1
+        	else{
+        		var unit = (Number(1)/Number(x))
+            	out = unit*Number(val)-0.2
+        	}
+       
+		if(x==7 || x==8 || x==9)//3o 4 un filtri attivo
+			out = casesThree(x, val);
+        if(x==11 || x==12 || x==13) //4 o 5  filtri attivi
+        	out = casesFour(x, val);	
+
+       if(removeGreen==true){
+    	   if(p[i].iconTemporaryColour=='#00CC33' || p[i].iconTemporaryColour== '#583470')
+    	   		out=0  
+       }   
+        return out 
+    }  
+      
+    function casesThree(tot, rel){
+    	var out = ""
+    	var wall = (Number(1)/Number(tot))*Number(rel)
+      	 if(wall>Number(0.8))
+        	   out = 1
+        	if(wall>Number(0.4) && wall<=Number(0.8))
+           	   out = 0.5
+           if(wall<=Number(0.4)) 
+            	out = 0.1
+            	console.log("Entrata in case3", out)
+           return out
+      }   
+     
+    function casesFour(tot, rel){
+    	var out = ""
+     	 if(Number(tot/rel)<=Number(1))
+       	   out = 1
+       	if(Number(tot/rel)>Number(1) && Number(tot/rel)<=Number(1.5))
+          	   out = 0.5
+          if(Number(tot/rel)>Number(1.5) && Number(tot/rel)<=Number(3))
+           	out = 0.1
+        	console.log("Entrata in case4", out)
+          return out
+     }
+     
+  function loadPatients(data){
+	  var text=data.split("\n");
+	  console.log(text)
+    	loadP = true
+	  for( var i=0; i<text.length-1; i++){
+		  var x=text[i].split(",");
+			p.push({name: x[0], 
+					surname:x[1], 
+					photo: x[2],
+					lat:x[3], 
+					lng:x[4],
+					asa:x[5],
+					barthel:x[6],
+					charlson:x[7],
+					lace:x[8],
+					gma:x[9], 
+					carer:x[10],
+					dwelling:x[11],
+					retrieval:x[12],
+					selfcare:x[13],
+					skills:x[14],
+					messaggi:x[15],
+					alert:x[16],
+					iconTemporaryColour : "",
+					checkMessage: false,
+					checkAlert: false})
+	  					} 
+	//var patients = L.layerGroup([]).addTo(mymap);
+	for(var i=0; i<p.length;i++) { 
+		p[i].icontTemporaryColour = '#583470'
+		if(p[i].messaggi!=0) p[i].checkMessage=true
+		if(p[i].alert!=0) p[i].checkAlert=true
+		selectedIcon = getIcon(baseColour, p[i].checkMessage, p[i].checkAlert, stopBlink)
+		if(p[i].checkMessage==true || p[i].checkAlert==true){
+			if(p[i].checkMessage==false)	this["marker"+i] = L.marker([p[i].lat,p[i].lng],  {icon: selectedIcon}).bindPopup("<div class='container-fluid' style='margin-top: 20px;'><div class='row'><div class='col-lg-12 text-center'><img src='"+p[i].photo+"' class='img-circle imgpatient text-center'></div><div class='row'><div class='col-lg-12 text-center'><h4>"+p[i].name+" "+p[i].surname+"</h4></div></div></div><div class='row'><div class='col-lg-12 text-center'><h6><b><a href=''><span class='glyphicon glyphicon-alert'></span><b>  There are "+p[i].alert+" unread alerts</b></a></h6></div></div></div><div class='row text-center'><button class='btn btn-warning'>Vai alla cartella clinica</button></div></div>");
+			if(p[i].checkAlert==false)	this["marker"+i] = L.marker([p[i].lat,p[i].lng],  {icon: selectedIcon}).bindPopup("<div class='container-fluid' style='margin-top: 20px;'><div class='row'><div class='col-lg-12 text-center'><img src='"+p[i].photo+"' class='img-circle imgpatient text-center'></div><div class='row'><div class='col-lg-12 text-center'><h4>"+p[i].name+" "+p[i].surname+"</h4></div></div></div><div class='row'><div class='col-lg-12 text-center'><h6><b><a href=''><span class='glyphicon glyphicon-envelope'></span>  There are "+p[i].messaggi+" unread messages</b></a></h6></div></div></div><div class='row text-center'><button class='btn btn-warning'>Vai alla cartella clinica</button></div></div>");
+			if(p[i].checkMessage==true && p[i].checkAlert==true) this["marker"+i] = L.marker([p[i].lat,p[i].lng],  {icon: selectedIcon}).bindPopup("<div class='container-fluid' style='margin-top: 20px;'><div class='row'><div class='col-lg-12 text-center'><img src='"+p[i].photo+"' class='img-circle imgpatient text-center'></div><div class='row'><div class='col-lg-12 text-center'><h4>"+p[i].name+" "+p[i].surname+"</h4></div></div></div><div class='row'><div class='col-lg-12 text-center'><h6><b><a href=''><span class='glyphicon glyphicon-envelope'></span>  There are "+p[i].messaggi+" unread messages</b></a><br><a href=''><span class='glyphicon glyphicon-alert'></span><b>  There are "+p[i].alert+" unread alerts</b></a></h6></div></div></div><div class='row text-center'><button class='btn btn-warning'>Vai alla cartella clinica</button></div></div>");
+		} 
+			else
+		this["marker"+i] = L.marker([p[i].lat,p[i].lng],  {icon: selectedIcon}).bindPopup("<div class='container-fluid' style='margin-top: 20px;'><div class='row'><div class='col-lg-12 text-center'><img src='"+p[i].photo+"' class='img-circle imgpatient text-center'></div><div class='row'><div class='col-lg-12 text-center'><h4>"+p[i].name+" "+p[i].surname+"</h4></div></div></div><div class='row text-center'><button class='btn btn-warning'>Vai alla cartella clinica</button></div></div>");
+		var x = findOpacity(i)
+		this["marker"+i].setOpacity(x);  
+		mymap.addLayer(this["marker"+i])
+			} 
+  }  
+     
+  	
+  function changeIcon(colour,i){
+		selectedIcon = getIcon(colour, p[i].checkMessage, p[i].checkAlert, stopBlink)
+		var x = findOpacity(i) 
+		this["marker"+i].setIcon(selectedIcon)
+		this["marker"+i].setOpacity(x);  
+		}
+  
+  function gmaFunction(){  
+	  lace=false; asa=false; barthel=false; charlson=false;
+	  gma = true
+	//var patients = L.layerGroup([]).addTo(mymap);
+	for(var i=0; i<p.length;i++) {
+		if(p[i].gma=="1" || p[i].gma=="2"){
+			p[i].iconTemporaryColour='#00CC33'
+			changeIcon(greenColour,i)
+			}
+		  
+		if(p[i].gma=="3"){
+			p[i].iconTemporaryColour= '#FF6600'
+			changeIcon(orangeColour,i)
+			} 
+		 
+		if(p[i].gma=="4"){
+			p[i].iconTemporaryColour='#E10000'
+			changeIcon(redColour,i)
+		}	
+	}
+  }
+  
+  
+  function laceFunction(){
+	  asa=false; gma=false; barthel=false; charlson=false;
+	  lace = true
+	var laceVal = []
+	var laceValUnique = []
+	var patients = L.layerGroup([]).addTo(mymap);
+	for(var i=0; i<p.length;i++) {
+		laceVal.push(p[i].lace)
+		laceValUnique.push(p[i].lace)
+	} 
+	laceVal.sort(function(a, b){return a-b});
+	$.unique(laceValUnique)
+	laceValUnique.sort(function(a, b){return a-b});
+	absoluteFreq = {}
+	for(var i=0; i<laceValUnique.length; i++){
+		var cnt=0
+		for(var j=0; j<laceVal.length;j++) {
+			if(laceValUnique[i]==laceVal[j])
+				cnt++
+		}
+		absoluteFreq[laceValUnique[i]] = cnt
+	}
+	comulatedFreq = {}
+	var com = Number(0)
+	for(k in absoluteFreq){
+		com += Number(absoluteFreq[k])
+		comulatedFreq[k] = Number(com)
+		var max = Number(comulatedFreq[k])
+	}
+	 
+	for(k in comulatedFreq){
+		for(var i=0; i<p.length;i++) {
+			if(k==p[i].lace){
+				if(comulatedFreq[k]<=(max/3)){
+					p[i].iconTemporaryColour='#00CC33'
+					changeIcon(greenColour,i)
+				}
+				
+				if(comulatedFreq[k]>(max/3) && comulatedFreq[k]<=2*(max/3)){
+					p[i].iconTemporaryColour= '#FF6600'
+					changeIcon(orangeColour,i)
+				}
+				
+				if(comulatedFreq[k]>2*(max/3) && comulatedFreq[k]<=max){
+					p[i].iconTemporaryColour='#E10000'
+					changeIcon(redColour,i)
+				}
+			}  
+		}
+	}
+	
+  }
+  
+  function charlsonFunction(){
+	  lace=false; gma=false; barthel=false; asa=false;
+	  charlson = true
+	var charlsonVal = []
+	var charlsonValUnique = []
+	var patients = L.layerGroup([]).addTo(mymap);
+	for(var i=0; i<p.length;i++) {
+		charlsonVal.push(p[i].charlson)
+		charlsonValUnique.push(p[i].charlson)
+	}
+	charlsonVal.sort(function(a, b){return a-b});
+	$.unique(charlsonValUnique)
+	charlsonValUnique.sort(function(a, b){return a-b});
+	absoluteFreq = {}
+	for(var i=0; i<charlsonValUnique.length; i++){
+		var cnt=0
+		for(var j=0; j<charlsonVal.length;j++) {
+			if(charlsonValUnique[i]==charlsonVal[j])
+				cnt++
+		}
+		absoluteFreq[charlsonValUnique[i]] = cnt
+	}
+	comulatedFreq = {}
+	var com = Number(0)
+	for(k in absoluteFreq){
+		com += Number(absoluteFreq[k])
+		comulatedFreq[k] = Number(com)
+		var max = Number(comulatedFreq[k])
+	}
+	 
+	for(k in comulatedFreq){
+		for(var i=0; i<p.length;i++) {
+			if(k==p[i].charlson && p[i].charlson>=3){
+				if(comulatedFreq[k]<=(max/3)){
+					p[i].iconTemporaryColour='#00CC33'
+					changeIcon(greenColour,i)
+				}
+				
+				if(comulatedFreq[k]>(max/3) && comulatedFreq[k]<=2*(max/3)){
+					p[i].iconTemporaryColour= '#FF6600'
+					changeIcon(orangeColour,i)
+				}
+				
+				if(comulatedFreq[k]>2*(max/3) && comulatedFreq[k]<=max){
+					p[i].iconTemporaryColour='#E10000'
+					changeIcon(redColour,i)
+				}
+			}
+			if(p[i].charlson<3){
+				p[i].iconTemporaryColour='#583470'
+				changeIcon(baseColour,i)
+			} 
+		}
+	}
+	
+  }
+  
+  function barthelFunction(){
+	  lace=false; gma=false; asa=false; charlson=false;
+	  barthel = true
+	//var patients = L.layerGroup([]).addTo(mymap);
+	for(var i=0; i<p.length;i++) {
+		if(p[i].barthel<="60"){
+			p[i].iconTemporaryColour='#E10000'
+			changeIcon(redColour,i)
+		}
+		
+		if(p[i].barthel>="61" && p[i].barthel<="90"){
+			p[i].iconTemporaryColour= '#FF6600'
+			changeIcon(orangeColour,i)
+		}
+		
+		if(p[i].barthel>="91" && p[i].barthel<="99"){
+			p[i].iconTemporaryColour='#00CC33'
+			changeIcon(greenColour,i)
+		}	
+	}  
+  }
+  
+  
+  function asaFunction(){
+	  lace=false; gma=false; barthel=false; charlson=false;
+	  asa = true
+	var patients = L.layerGroup([]).addTo(mymap);
+	for(var i=0; i<p.length;i++) {
+		if(p[i].asa=="II"){
+			p[i].iconTemporaryColour='#00CC33'
+			changeIcon(greenColour,i)
+		}
+		
+		if(p[i].asa=="III"){
+			p[i].iconTemporaryColour='#E10000'
+			changeIcon(redColour,i)
+		}	
+	}
+  }
+   
+  </script>
+  
+   <style>
+            #mapid {
+                height: 600px;
+                overflow:hidden;
+            }
+			
+			td {
+				padding:0px 10px 0px 10px
+			}
+			
+			.logo {
+			margin-left: 20px;
+			height: 100px;
+			}
+			
+			.bot {
+ display: inline-block;
+  padding: 6px 12px;
+  margin-bottom: 0;
+  font-size: 18px;
+  font-weight: normal;
+  line-height: 1.428571429;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  border: 1px solid lightgrey;
+  border-radius: 0px;
+  width: 160px;
+  height:40px;
+} 
+
+			.bot:hover {
+	background-color:#563d7c;
+	 display: inline-block;
+  padding: 6px 12px;
+  margin-bottom: 0;
+  color: white;
+  font-size: 12px;
+  font-weight: normal;
+  line-height: 1.428571429;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  border: 1px solid #563d7c;
+  border-radius: 0px;
+  width: 160px;
+  height:40px;
+} 
+
+		
+			.botdrop {
+			background-color: #563d7c;
+			opacity: 0.8;
+ display: inline-block;
+  padding: 6px 12px;
+  margin-bottom: 0;
+  color: white;
+  font-size: 12px;
+  font-weight: normal;
+  line-height: 1.428571429;
+  text-align: center;
+  align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  border: 1px solid #563d7c;
+  border-radius: 0px;
+  height:40px;
+  width: 160px;
+} 
+			.botdrop:hover {
+			background-color: #563d7c;
+ display: inline-block;
+  padding: 6px 12px;
+  margin-bottom: 0;
+  font-size: 12px;
+  color: white;
+  font-weight: normal;
+  line-height: 1.428571429;
+  text-align: center;
+  align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  border: 1px solid greu;
+  border-radius: 0px;
+  height:40px;
+  width: 160px;
+} 
+
+			
+			.sp {
+			margin-top: 20px;
+			}
+			
+			.imgpatient {
+			height: 50px;
+			length: 50px;
+			}
+			
+			.blinking {
+ 			 animation: fade 1s infinite alternate;
+			}
+			
+			@keyframes fade { 
+ 			 from { opacity: 0; } 
+			} 
+			
+			  @keyframes check {0% {height: 0;width: 0;}
+    25% {height: 0;width: 20px;}
+    50% {height: 40px;width: 10px;}
+  }
+ .checkbox{background-color:#fff;display:inline-block;height:28px;margin:0 .25em;width:28px;border-radius:4px;border:1px solid #ccc;float:right}
+  .checkbox span{display:block;height:28px;position:relative;width:28px;padding:0}
+  .checkbox span:after{-moz-transform:scaleX(-1) rotate(135deg);-ms-transform:scaleX(-1) rotate(135deg);-webkit-transform:scaleX(-1) rotate(135deg);transform:scaleX(-1) rotate(135deg);-moz-transform-origin:left top;-ms-transform-origin:left top;-webkit-transform-origin:left top;transform-origin:left top;border-right:4px solid #fff;border-top:4px solid #fff;content:'';display:block;height:20px;left:3px;position:absolute;top:15px;width:10px}
+  .checkbox span:hover:after{border-color:#583470}
+  .checkbox input{display:none}
+  .checkbox input:checked + span:after{-webkit-animation:check .8s;-moz-animation:check .8s;-o-animation:check .8s;animation:check .8s;border-color:#555}
+.checkbox input:checked + .default:after{border-color:#444}
+.checkbox input:checked + .primary:after{border-color:#2196F3}
+.checkbox input:checked + .success:after{border-color:#8bc34a}
+.checkbox input:checked + .info:after{border-color:#3de0f5}
+.checkbox input:checked + .warning:after{border-color:#FFC107}
+.checkbox input:checked + .danger:after{border-color:#f44336}
+  </style> 
+  
+</head>    
+<body background="text1.jpg">
+<div class="container-fluid" style="margin-top: 5px;">
+<div class="row">
+<div class="col-lg-3"><button type="button" style="opacity: 0.7; margin-top: 15px; margin-right:25px;" id="delete" class="btn btn-default botdrop" data-toggle="popover" data-trigger="hover" data-placement="bottom" data-content="For remove and restore from the map the safe patients for a better reading of the data"><b>Remove/Restore Safe</b></button>
+<button type="button" style="opacity:0.7; margin-top: 15px; margin-right:25px;" class="btn btn-default botdrop" data-toggle="popover" id="stopBlink" data-trigger="hover" data-placement="bottom" data-content="For stop and restore all the blinkinig icons"><b>Stop/Restore Blink</b></button>
+</div>
+<div class="col-lg-6 text-center">
+ <img src="photo/logo.png" class="img-rounded logo" alt="logo" style="margin-top: 30px;">
+</div>
+<div class="col-lg-3 text-right">
+<button type="button" style="opacity:0.6; margin-top: 15px; margin-right:25px;" class="btn btn-default botdrop" data-toggle="popover" data-trigger="hover" data-placement="bottom" data-content="For apply an index please, click the respective button">Help</button><br>
+</div>
+</div>
+</div>
+
+
+<div class="container-fluid" style="margin-top: 20px;">
+<div class="row">
+<div class="col-sm-3">
+ <form>
+  <div class="input-group">
+    <input type="text" class="form-control" placeholder="Search Patient" style="length: 40px; height: 40px;">
+    <div class="input-group-btn">
+      <button class="btn btn-default" type="submit" style="height: 40px;">
+        <i class="glyphicon glyphicon-search"></i>
+      </button>
+    </div>
+  </div>
+</form>
+</div>
+
+<div class="col-sm-9">
+<div class="btn-group btn-group-sm">
+  <button type="button" class="btn btn-default bot" id="lace" data-toggle="popover" data-trigger="hover" data-placement="top" data-content="For apply an index please, click the respective button"><strong style="opacity: 0.7;">LACE</strong></button>
+   <button type="button" class="btn btn-default bot" id="charlson"  data-toggle="popover" data-trigger="hover" data-placement="top" data-content="For apply an index please, click the respective button"><strong style="opacity: 0.7;">Charlson</strong></button>
+  <button type="button" class="btn btn-default bot" id="gma" data-toggle="popover" data-trigger="hover" data-placement="top" data-content="For apply an index please, click the respective button"><strong style="opacity: 0.7;">GMA</strong></button>
+   <button type="button" class="btn btn-default bot" id="barthel" data-toggle="popover" data-trigger="hover" data-placement="top" data-content="For apply an index please, click the respective button"><strong style="opacity: 0.7;">Barthel</strong></button>
+  <button type="button" class="btn btn-default bot" id="asa" data-toggle="popover" data-trigger="hover" data-placement="top" data-content="For apply an index please, click the respective button"><strong style="opacity: 0.7;">ASA</strong></button>
+  <button class="btn btn-default dropdown-toggle botdrop" type="button" data-toggle="collapse" data-target="#demo"><span class="glyphicon glyphicon-collapse-down text-center" style="font-size: 15px; color: white; opacity: 0.8; margin-top: 3px;"></span>   Legend</button>
+
+</div>
+  <div id="demo" class="collapse sp">
+		
+	</div>
+
+</div>
+</div>
+</div>
+
+<br>
+<div class="container-fluid">
+<div class="row">
+
+<div class="col-sm-3" style="background-color: #violet;">
+<div class="card">
+    <ul class="list-group list-group-flush">
+    		
+    	 <li class="list-group-item" style="height: 40px; background-color: #583470; opacity: 0.8;"><b style="color: white;">Barriers</b>
+    
+         <li class="list-group-item" style="height: 50px; font-size: 13px; opacity: 0.9;">Skills to carry out the treatment
+         <label class="checkbox"><input type="checkbox"  id="skills"><span class="success"></span></label>
+                  
+      	 <li class="list-group-item" style="height: 50px; font-size: 13px; opacity: 0.9;">Retrieval of tablets in the pharmacy office
+         <label class="checkbox"><input type="checkbox"  id="retrieval"><span class="success"></span></label>
+         
+         <li class="list-group-item" style="height: 50px; font-size: 13px; opacity: 0.9;">Selfcare skills
+         <label class="checkbox"><input type="checkbox" id="selfcare"><span class="success"></span></label>
+         
+         <li class="list-group-item" style="height: 50px; font-size: 13px; opacity: 0.9;">Dwelling
+         <label class="checkbox"><input type="checkbox"  id="dwelling"><span class="success"></span></label>
+         
+         <li class="list-group-item" style="height: 50px; font-size: 13px; opacity: 0.9;">Carer skills
+         <label class="checkbox"><input type="checkbox"  id="carer"><span class="success"></span></label>
+            
+            </ul>
+            </div> 
+            </div>
+
+<div class="col-sm-9">
+<div id="mapid" style="height: 400px;"></div>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>
